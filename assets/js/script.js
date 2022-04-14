@@ -11,6 +11,9 @@ var createTask = function (taskText, taskDate, taskList) {
   // append span and p element to parent li
   taskLi.append(taskSpan, taskP);
 
+  //check due date
+  auditTask(taskLi);
+
   // append to ul list on the page
   $("#list-" + taskList).append(taskLi);
 };
@@ -82,12 +85,21 @@ $(".list-group").on("click", "span", function () {
   //swap out elements
   $(this).replaceWith(dateInput);
 
+  dateInput.datepicker({
+    minDate: 1,
+
+    onclose: function () {
+      // when calendar is closed, force a "change" event on the 'data input'
+      $(this).trigger("change");
+    },
+  });
+
   //automatically focus on new element
   dateInput.trigger("focus");
 });
 
 //value of due date was changed
-$(".list-group").on("blur", "input[type='text']", function () {
+$(".list-group").on("change", "input[type='text']", function () {
   var date = $(this).val().trim();
 
   // get the parent ul's id attribute
@@ -98,12 +110,18 @@ $(".list-group").on("blur", "input[type='text']", function () {
 
   // update task in array and re-save to localstorage
   tasks[status][index].date = date;
-
   saveTasks();
 
+  var taskSpan = $("<span>")
+    .addClass("badge badge-primary badge-pill")
+    .text(date);
+  $(this).replaceWith(taskSpan);
+
+  //pass tasks <li> element into audtiTasks() to check new due date
+  auditTask($(taskSpan).closest(".list-group-item"));
   //recrete span elements with bootstrap classes
   var taskSpan = $("<span>")
-    .addClass("dadge badge-primary badge-pill")
+    .addClass("badge badge-primary badge-pill")
     .text(date);
 
   //replace input with span element
@@ -197,6 +215,27 @@ $("#trash").droppable({
     console.log("out");
   },
 });
+
+$("#modalDueDate").datepicker({
+  minDate: 1,
+});
+
+var auditTask = function (taskEl) {
+  //ge date from task element
+  var date = $(taskEl).find("span").text().trim();
+  //ensure it worked
+  console.log(date);
+
+  var time = moment(date, "L").set("hour", 17);
+
+  $(taskEl).removeClass("list-group-item-warning list-group-item-danger");
+
+  if (moment().isAfter(time)) {
+    $(taskEl).addClass("list-group-item-danger");
+  } else if (Math.abs(moment().diff(time, "days")) <= 2) {
+    $(taskEl).addClass("list-group-item-warning");
+  }
+};
 
 // remove all tasks
 $("#remove-tasks").on("click", function () {
